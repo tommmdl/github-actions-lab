@@ -2,6 +2,8 @@
 
 English | [Português](README.md)
 
+[![CI + GHCR](https://github.com/tommmdl/github-actions-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/tommmdl/github-actions-lab/actions/workflows/ci.yml)
+
 Pipeline that tests the [docker-lab application](https://github.com/tommmdl/docker-lab) and publishes **the exact tested image** to GitHub Container Registry. Application code remains upstream; this repository contains automation, documentation and evidence.
 
 ## Flow
@@ -36,6 +38,12 @@ The separate `publish` job downloads the artifact from the same run, verifies ch
 
 Image: **`ghcr.io/tommmdl/docker-lab`**
 
+Publication and anonymous pull confirmed in the [validated run](docs/validation.en.md).
+
+```bash
+docker pull ghcr.io/tommmdl/docker-lab:latest
+```
+
 | Tag | Meaning |
 | --- | --- |
 | `run-<run_id>-<attempt>` | Unique tag per run attempt |
@@ -47,6 +55,8 @@ Registry writers can overwrite tags. For reproducible consumption, use `ghcr.io/
 ## Permissions and credentials
 
 Only the publication job receives `packages: write`; other jobs use `contents: read`. Login uses the ephemeral `GITHUB_TOKEN` through stdin. No PAT or manually configured secret is required for workflow publication. PRs cannot publish and do not use `pull_request_target`. Logout runs even after a failure.
+
+The database secret uses a 0644 file inside a 0700 local directory on Linux, allowing the API UID to read the bind mount while restricting access through the host directory. The password is not copied into the image. Windows ACL behavior may differ.
 
 GHCR package visibility is independent of repository visibility. New packages may start private. If needed, open package settings and make it public for anonymous pulls. Private-package consumers must authenticate with `read:packages`; never commit tokens or put them into Compose.
 
@@ -77,6 +87,7 @@ bash scripts/compose.sh -f compose.ghcr.yaml down
 
 - `permission_denied: write_package`: check `packages: write`, existing package linkage/access and account policies.
 - Unauthorized pull: check package visibility and authenticate the consumer if required.
+- `PermissionError` for `/run/secrets/db_password`: run the current `prepare.sh`; bind-mounted files must be readable by the API UID.
 - Failed tests: inspect job logs and `integration-evidence`; publication is skipped.
 - Download evidence: `gh run download RUN_ID --repo tommmdl/github-actions-lab -n integration-evidence`.
 

@@ -2,6 +2,8 @@
 
 [English](README.en.md) | Português
 
+[![CI + GHCR](https://github.com/tommmdl/github-actions-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/tommmdl/github-actions-lab/actions/workflows/ci.yml)
+
 Pipeline que testa a [aplicação docker-lab](https://github.com/tommmdl/docker-lab) e publica **a mesma imagem testada** no GitHub Container Registry. O código da aplicação permanece no repositório original; este repositório contém automação, documentação e evidências.
 
 ## Fluxo
@@ -36,6 +38,12 @@ O job `publish` recebe o artefato da mesma execução, confere checksum e ID, ca
 
 Imagem: **`ghcr.io/tommmdl/docker-lab`**
 
+Publicação e pull anônimo confirmados na [execução validada](docs/validation.md).
+
+```bash
+docker pull ghcr.io/tommmdl/docker-lab:latest
+```
+
 | Tag | Significado |
 | --- | --- |
 | `run-<run_id>-<attempt>` | Tag única por tentativa de execução |
@@ -47,6 +55,8 @@ Tags podem ser sobrescritas por alguém com acesso ao registry. Para consumo rep
 ## Permissões e credenciais
 
 Somente o job de publicação recebe `packages: write`; os demais usam `contents: read`. O login utiliza `GITHUB_TOKEN` efêmero via stdin. Nenhum PAT ou segredo manual é necessário para publicar a partir deste workflow. PRs não publicam e não usam `pull_request_target`. O logout executa mesmo após falhas.
+
+O secret do banco usa arquivo 0644 dentro de diretório local 0700 no Linux, permitindo leitura pelo UID da API no bind mount sem expor a pasta a outros usuários do host. A senha não é copiada para a imagem. ACLs do Windows podem ter comportamento diferente.
 
 A visibilidade de um pacote GHCR é independente da visibilidade do repositório. Pacotes novos podem iniciar privados. Se necessário, abra as configurações do pacote e habilite visibilidade pública para permitir pull anônimo. Para pacote privado, o consumidor precisa de autenticação com permissão `read:packages`; não coloque tokens no Compose ou no Git.
 
@@ -77,6 +87,7 @@ bash scripts/compose.sh -f compose.ghcr.yaml down
 
 - `permission_denied: write_package`: confira `packages: write`, vínculo/permissões de um pacote preexistente e políticas da conta.
 - `unauthorized` ao fazer pull: verifique a visibilidade do pacote e autentique o consumidor se necessário.
+- `PermissionError` em `/run/secrets/db_password`: execute a versão atual de `prepare.sh`; arquivos bind-mounted precisam ser legíveis pelo UID da API.
 - Testes falhando: consulte o log do job e `integration-evidence`; o job de publicação será pulado.
 - Para baixar evidências: `gh run download RUN_ID --repo tommmdl/github-actions-lab -n integration-evidence`.
 

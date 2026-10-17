@@ -1,0 +1,10 @@
+{
+  "registry": "ghcr.io/tommmdl/docker-lab",
+  "digest": "sha256:d8fdaffb99e0ac514b9e031ac9204b89fc2702112d198d1bebedd9d351fd19f0",
+  "anonymous_pull": "passed with separate empty Docker config",
+  "demo_url": "http://127.0.0.1:8001",
+  "readiness": 200,
+  "create": 201,
+  "list": "created note found",
+  "delete": 204
+}

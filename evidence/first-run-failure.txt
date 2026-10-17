@@ -1,0 +1,8 @@
+Run: https://github.com/tommmdl/github-actions-lab/actions/runs/39073078828
+Application revision: 9879bdba2a695e42236e7cec97c48e072cabe954
+Observed error in collected API logs:
+PermissionError: [Errno 13] Permission denied: '/run/secrets/db_password'
+Result: test job failed; publish job skipped. No image was published by this run.
+Fix: protect .local directory with mode 0700 and set password file mode 0644,
+so the non-root API UID can read the local Compose bind mount on Linux.
+Application fix: 2c04e97d892796659bb2fc716f7ff18cc55d7305
