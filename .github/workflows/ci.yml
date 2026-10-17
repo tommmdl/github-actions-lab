@@ -117,6 +117,8 @@ jobs:
             docker push "$IMAGE:$TAG"
           done
           DIGEST=$(docker image inspect "$IMAGE:$RUN_TAG" --format '{{index .RepoDigests 0}}')
+          docker pull "$DIGEST"
+          test "$(docker image inspect "$DIGEST" --format '{{.Id}}')" = "$(cat image/tested-image-id.txt)"
           printf '%s\n' "$DIGEST" > published-image.txt
           {
             echo '## Published tested image'
