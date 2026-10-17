@@ -1,100 +1,64 @@
-# GitHub Actions Lab — CI + GHCR
+# GitHub Actions: from tests to a published image
 
-English | [Português](README.md)
+English · [Português](README.md)
+
+Once the app is running with Docker, the next step is to stop repeating the work by hand. This project moves testing into GitHub Actions and publishes the image to GHCR when the checks pass.
+
+The important part is keeping what was tested: the first job builds and checks an image; the second receives that same image and publishes it without rebuilding. Application code stays in [docker-lab](https://github.com/tommmdl/docker-lab).
 
 [![CI + GHCR](https://github.com/tommmdl/github-actions-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/tommmdl/github-actions-lab/actions/workflows/ci.yml)
 
-Pipeline that tests the [docker-lab application](https://github.com/tommmdl/docker-lab) and publishes **the exact tested image** to GitHub Container Registry. Application code remains upstream; this repository contains automation, documentation and evidence.
+## Getting started
 
-## Flow
+You only need repository access to follow the workflow. The local demo uses Linux/WSL, Docker, Compose, Bash, Python 3, curl and an available port 8001.
 
-```mermaid
-flowchart LR
-    pin[source.json: pinned commit] --> checkout[Application checkout]
-    checkout --> build[Build once]
-    build --> tests[23 tests with PostgreSQL]
-    tests --> artifact[Image + checksum + ID]
-    artifact --> publish[Separate job: GHCR]
-```
-
-Pull requests run builds/tests with `contents: read`. Pushes to `main` and manual runs on `main` also publish after tests pass. Documentation-only changes do not trigger runs; workflow, script and `source.json` changes do. No schedule or automatic upstream change trigger is configured.
-
-## Run and update the application
-
-Open **Actions → Test and publish Docker Lab → Run workflow** on GitHub and select `main`.
+From the repository root:
 
 ```bash
 gh workflow run ci.yml --repo tommmdl/github-actions-lab --ref main
 gh run list --repo tommmdl/github-actions-lab
 ```
 
-`source.json` pins the full application commit SHA. To update, change the revision to a reviewed `tommmdl/docker-lab` commit and open a PR. The workflow validates the repository/SHA format and tests that revision. Reruns keep using the same application revision until the pin changes.
+You can also open **Actions → Test and publish Docker Lab → Run workflow** on GitHub.
 
-## Testing and publication
-
-The `test` job builds the API with OCI source/revision labels, starts Compose and runs the 23 upstream integration checks: CRUD, invalid input, persistence across recreation, database outage and recovery. It saves the image with `docker save`, an archive SHA-256 and the image ID.
-
-The separate `publish` job downloads the artifact from the same run, verifies checksum and image ID, uses `docker load` and pushes without rebuilding. It does not check out source with write permissions. Actions are pinned by SHA. Runners are GitHub-hosted `ubuntu-24.04`.
-
-Image: **`ghcr.io/tommmdl/docker-lab`**
-
-Publication and anonymous pull confirmed in the [validated run](docs/validation.en.md).
+The published image is available without logging in:
 
 ```bash
 docker pull ghcr.io/tommmdl/docker-lab:latest
 ```
 
-| Tag | Meaning |
-| --- | --- |
-| `run-<run_id>-<attempt>` | Unique tag per run attempt |
-| `app-<full SHA>` | Latest build using this application commit |
-| `latest` | Latest successful main publication |
-
-Registry writers can overwrite tags. For reproducible consumption, use `ghcr.io/tommmdl/docker-lab@sha256:...` from the job summary or `publication` artifact. `app-...` may change on rebuild due to metadata/external dependencies.
-
-## Permissions and credentials
-
-Only the publication job receives `packages: write`; other jobs use `contents: read`. Login uses the ephemeral `GITHUB_TOKEN` through stdin. No PAT or manually configured secret is required for workflow publication. PRs cannot publish and do not use `pull_request_target`. Logout runs even after a failure.
-
-The database secret uses a 0644 file inside a 0700 local directory on Linux, allowing the API UID to read the bind mount while restricting access through the host directory. The password is not copied into the image. Windows ACL behavior may differ.
-
-GHCR package visibility is independent of repository visibility. New packages may start private. If needed, open package settings and make it public for anonymous pulls. Private-package consumers must authenticate with `read:packages`; never commit tokens or put them into Compose.
-
-## Run the published image
-
-Prerequisites: Docker Engine, Compose, Bash, Python 3 and curl on Linux/WSL; automatic local Compose installation supports x86_64. From this repository root:
+To run the demo environment:
 
 ```bash
 bash scripts/prepare.sh
-# IMAGE_REF can point to the published digest instead of latest.
-bash scripts/compose.sh -f compose.ghcr.yaml pull
 bash scripts/compose.sh -f compose.ghcr.yaml up -d --wait --wait-timeout 180
 ```
 
-Open http://localhost:8001. This Compose project uses its own name/volume and does not replace `docker-lab` on port 8000. PostgreSQL has no published host port. The API has no user authentication and binds only to localhost.
+Open http://localhost:8001. Use a published digest instead of `latest` to select a specific image.
+
+## Things to try
+
+1. Follow the checks and inspect the run artifacts.
+2. Compare the tested image ID with the published one.
+3. Pull the GHCR image and run the application.
+4. Update the commit in `source.json` when you want to test another `docker-lab` revision.
+
+## What has been tested
+
+The pipeline passed all 23 checks and published the image. Anonymous pull worked, and the published app was tested locally. The documentation also records a failed run that blocked publication.
+
+The [results and their limits](docs/validation.en.md) include execution details and evidence. They refer to the revisions recorded in those reports.
+
+## When you are done
 
 ```bash
-IMAGE_REF=ghcr.io/tommmdl/docker-lab@sha256:REPLACE_WITH_DIGEST \
-  bash scripts/compose.sh -f compose.ghcr.yaml up -d --wait
 bash scripts/compose.sh -f compose.ghcr.yaml down
 ```
 
-`down` preserves the volume; **adding `-v` permanently deletes this demo environment's notes**. CI uses `down -v` only on its ephemeral runner to remove test data. Preparation preserves existing local passwords; changing the file does not rotate an initialized database password.
+The demo keeps notes in its own volume; adding `-v` deletes them. Pull requests only test. Publication is restricted to main and uses the temporary `GITHUB_TOKEN`, without a PAT.
 
-## Evidence and troubleshooting
+## A closer look
 
-[Actual validation](docs/validation.en.md). Artifacts: `integration-evidence` (14 days), `tested-image` (3 days) and `publication` (30 days). Failure logs are collected too, but the JSON report exists only if tests reach completion. Only explicit files are uploaded; the database password is excluded.
+The [usage guide](docs/guide.en.md) covers architecture, configuration, tests, limitations and troubleshooting. The [portfolio](https://github.com/tommmdl/devops-portfolio) connects this project to the other labs.
 
-- `permission_denied: write_package`: check `packages: write`, existing package linkage/access and account policies.
-- Unauthorized pull: check package visibility and authenticate the consumer if required.
-- `PermissionError` for `/run/secrets/db_password`: run the current `prepare.sh`; bind-mounted files must be readable by the API UID.
-- Failed tests: inspect job logs and `integration-evidence`; publication is skipped.
-- Download evidence: `gh run download RUN_ID --repo tommmdl/github-actions-lab -n integration-evidence`.
-
-Limits: `linux/amd64` publication; no production deployment, signing or vulnerability audit. Archive checksums do not replace signed provenance. Review Action, script and Dockerfile changes before merging into main.
-
-## References
-
-- [Publishing images with GitHub Actions](https://docs.github.com/en/actions/tutorials/publish-packages/publish-docker-images)
-- [GHCR authentication and permissions](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
-- [Upstream application and tests](https://github.com/tommmdl/docker-lab)
+[About the history update](docs/history.md)
