@@ -64,7 +64,7 @@ Prerequisites: Docker Engine, Compose, Bash, Python 3 and curl on Linux/WSL; aut
 
 ```bash
 bash scripts/prepare.sh
-# IMAGE_REF can point to the published digest instead of latest.
+# Defaults use pinned digests; IMAGE_REF can select another API revision.
 bash scripts/compose.sh -f compose.ghcr.yaml pull
 bash scripts/compose.sh -f compose.ghcr.yaml up -d --wait --wait-timeout 180
 ```
@@ -96,3 +96,5 @@ Limits: `linux/amd64` publication; no production deployment, signing or vulnerab
 - [Publishing images with GitHub Actions](https://docs.github.com/en/actions/tutorials/publish-packages/publish-docker-images)
 - [GHCR authentication and permissions](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
 - [Upstream application and tests](https://github.com/tommmdl/docker-lab)
+
+The `publication` artifact now contains two lines: the API digest followed by the PostgreSQL digest. Database tags use `postgres-`; `compose.ghcr.yaml` pins both images. Keep the historical `evidence/published-image.txt` as the original run record.
