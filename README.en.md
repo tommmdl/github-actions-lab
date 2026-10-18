@@ -62,3 +62,7 @@ The demo keeps notes in its own volume; adding `-v` deletes them. Pull requests 
 The [usage guide](docs/guide.en.md) covers architecture, configuration, tests, limitations and troubleshooting. The [portfolio](https://github.com/tommmdl/devops-portfolio) connects this project to the other labs.
 
 [About the history update](docs/history.md)
+
+## Check image security
+
+[security-lab](https://github.com/tommmdl/security-lab) scans this project's published image with Trivy and enforces a HIGH/CRITICAL gate. Blocking and reports live in that repository's CI; this publication pipeline does not yet depend on that gate.

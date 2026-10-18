@@ -62,3 +62,7 @@ A demonstração mantém as notas em um volume próprio; adicionar `-v` apaga es
 O [guia de uso](docs/guide.md) reúne arquitetura, configuração, testes, limitações e ajuda para investigar problemas. O [portfólio](https://github.com/tommmdl/devops-portfolio) conecta este projeto aos outros laboratórios.
 
 [Sobre a revisão do histórico](docs/history.md)
+
+## Conferir a segurança da imagem
+
+O [security-lab](https://github.com/tommmdl/security-lab) analisa a imagem publicada deste projeto com Trivy e aplica um gate de HIGH/CRITICAL. O bloqueio e seus relatórios ficam no CI daquele repositório; esta pipeline de publicação ainda não depende desse gate.
