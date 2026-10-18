@@ -66,3 +66,7 @@ The [usage guide](docs/guide.en.md) covers architecture, configuration, tests, l
 ## Check image security
 
 [security-lab](https://github.com/tommmdl/security-lab) scans this project's published image with Trivy and enforces a HIGH/CRITICAL gate. Blocking and reports live in that repository's CI; this publication pipeline does not yet depend on that gate.
+
+The pipeline now builds and tests the API together with the derived PostgreSQL image from `docker-lab/images/postgres`. Both tested images travel in the same artifact; publication verifies each image ID before pushing them to GHCR. The publication artifact records both digests. The separate security gate still reports remaining HIGH/CRITICAL findings and may stay red. Publishing a remediation image does not mean that gate approved it.
+
+Both digests use the existing public `ghcr.io/tommmdl/docker-lab` package. API tags are unchanged; database tags start with `postgres-` (for example `postgres-latest`). Deployment uses digests rather than mutable tags.

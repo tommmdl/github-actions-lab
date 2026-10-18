@@ -9,6 +9,9 @@ docker build --label "org.opencontainers.image.source=https://github.com/${GITHU
   --label "org.opencontainers.image.url=https://github.com/tommmdl/docker-lab" \
   --label "io.github.pipeline.revision=${GITHUB_SHA}" \
   -t docker-lab-api:local .
+docker build --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
+  --label "org.opencontainers.image.revision=${APP_REVISION}" \
+  -t docker-lab-postgres:local images/postgres
 bash scripts/compose.sh up -d --no-build --wait --wait-timeout 180
 python3 tests/integration.py
 python3 - <<'CHECK'
@@ -20,6 +23,7 @@ if result['passed'] != 23:
 CHECK
 mkdir -p ../.local
 docker image inspect docker-lab-api:local --format '{{.Id}}' > ../.local/tested-image-id.txt
-docker save docker-lab-api:local -o ../.local/tested-image.tar
+docker image inspect docker-lab-postgres:local --format '{{.Id}}' > ../.local/tested-postgres-id.txt
+docker save docker-lab-api:local docker-lab-postgres:local -o ../.local/tested-image.tar
 cd ../.local
 sha256sum tested-image.tar > tested-image.tar.sha256

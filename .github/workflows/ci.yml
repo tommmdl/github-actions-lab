@@ -49,6 +49,7 @@ jobs:
             .local/tested-image.tar
             .local/tested-image.tar.sha256
             .local/tested-image-id.txt
+            .local/tested-postgres-id.txt
           include-hidden-files: true
           compression-level: 0
           retention-days: 3
@@ -69,6 +70,7 @@ jobs:
             app-source/.local/integration-results.json
             .local/compose.log
             .local/tested-image-id.txt
+            .local/tested-postgres-id.txt
           include-hidden-files: true
           retention-days: 14
           if-no-files-found: warn
@@ -100,6 +102,7 @@ jobs:
           sha256sum --check tested-image.tar.sha256
           docker load --input tested-image.tar
           test "$(docker image inspect docker-lab-api:local --format '{{.Id}}')" = "$(cat tested-image-id.txt)"
+          test "$(docker image inspect docker-lab-postgres:local --format '{{.Id}}')" = "$(cat tested-postgres-id.txt)"
       - name: Login to GHCR
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -110,22 +113,33 @@ jobs:
           OWNER: ${{ github.repository_owner }}
           APP_REVISION: ${{ needs.test.outputs.app_revision }}
         run: |
-          IMAGE="ghcr.io/${OWNER,,}/docker-lab"
           RUN_TAG="run-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          for TAG in "$RUN_TAG" "app-${APP_REVISION}" latest; do
-            docker tag docker-lab-api:local "$IMAGE:$TAG"
-            docker push "$IMAGE:$TAG"
+          : > published-image.txt
+          for NAME in docker-lab docker-lab-postgres; do
+            PREFIX=""
+            LOCAL=docker-lab-api:local
+            ID_FILE=image/tested-image-id.txt
+            if [ "$NAME" = docker-lab-postgres ]; then
+              PREFIX="postgres-"
+              LOCAL=docker-lab-postgres:local
+              ID_FILE=image/tested-postgres-id.txt
+            fi
+            IMAGE="ghcr.io/${OWNER,,}/docker-lab"
+            for TAG in "$RUN_TAG" "app-${APP_REVISION}" latest; do
+              docker tag "$LOCAL" "$IMAGE:${PREFIX}$TAG"
+              docker push "$IMAGE:${PREFIX}$TAG"
+            done
+            DIGEST=$(docker image inspect "$IMAGE:${PREFIX}$RUN_TAG" --format '{{index .RepoDigests 0}}')
+            docker pull "$DIGEST"
+            test "$(docker image inspect "$DIGEST" --format '{{.Id}}')" = "$(cat "$ID_FILE")"
+            printf '%s\n' "$DIGEST" >> published-image.txt
           done
-          DIGEST=$(docker image inspect "$IMAGE:$RUN_TAG" --format '{{index .RepoDigests 0}}')
-          docker pull "$DIGEST"
-          test "$(docker image inspect "$DIGEST" --format '{{.Id}}')" = "$(cat image/tested-image-id.txt)"
-          printf '%s\n' "$DIGEST" > published-image.txt
           {
-            echo '## Published tested image'
+            echo '## Published tested API and PostgreSQL images'
             echo "- Application commit: $APP_REVISION"
             echo "- Pipeline commit: $GITHUB_SHA"
-            echo "- Run tag: $IMAGE:$RUN_TAG"
-            echo "- Digest: $DIGEST"
+            cat published-image.txt
+            echo "- Run tag: $RUN_TAG"
             echo '- All 23 integration checks passed before publication.'
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Save publication digest
