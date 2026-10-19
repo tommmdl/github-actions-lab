@@ -70,3 +70,5 @@ The [usage guide](docs/guide.en.md) covers architecture, configuration, tests, l
 The pipeline now builds and tests the API together with the derived PostgreSQL image from `docker-lab/images/postgres`. Both tested images travel in the same artifact; publication verifies each image ID before pushing them to GHCR. The publication artifact records both digests. The separate security gate still reports remaining HIGH/CRITICAL findings and may stay red. Publishing a remediation image does not mean that gate approved it.
 
 Both digests use the existing public `ghcr.io/tommmdl/docker-lab` package. API tags are unchanged; database tags start with `postgres-` (for example `postgres-latest`). Deployment uses digests rather than mutable tags.
+
+Database publication now also requires 20 privilege/resource checks and an in-place upgrade test with three notes, in addition to the 23 API checks. The upgrade verifies the same volume, preserved login/data and termination of an old privileged session. The separate vulnerability gate remains unchanged.

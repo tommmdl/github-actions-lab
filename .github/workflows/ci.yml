@@ -68,6 +68,8 @@ jobs:
           name: integration-evidence
           path: |
             app-source/.local/integration-results.json
+            app-source/.local/database-security-results.json
+            app-source/.local/database-upgrade-results.json
             .local/compose.log
             .local/tested-image-id.txt
             .local/tested-postgres-id.txt

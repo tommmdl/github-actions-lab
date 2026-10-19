@@ -13,7 +13,9 @@ docker build --label "org.opencontainers.image.source=https://github.com/${GITHU
   --label "org.opencontainers.image.revision=${APP_REVISION}" \
   -t docker-lab-postgres:local images/postgres
 bash scripts/compose.sh up -d --no-build --wait --wait-timeout 180
+python3 tests/database_security.py
 python3 tests/integration.py
+python3 tests/database_upgrade.py
 python3 - <<'CHECK'
 import json
 from pathlib import Path

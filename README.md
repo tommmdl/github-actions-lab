@@ -70,3 +70,5 @@ O [security-lab](https://github.com/tommmdl/security-lab) analisa a imagem publi
 O pipeline agora constrói e testa a API junto da imagem derivada do PostgreSQL em `docker-lab/images/postgres`. As duas imagens testadas seguem no mesmo artefato; a publicação confere o ID de cada uma antes de enviá-las ao GHCR. O artefato de publicação registra os dois digests. O gate de segurança separado continua apontando os achados HIGH/CRITICAL restantes e pode continuar vermelho. Publicar uma imagem com correções não significa que o gate a aprovou.
 
 Os dois digests usam o pacote público já existente `ghcr.io/tommmdl/docker-lab`. As tags da API continuam iguais; as do banco começam com `postgres-` (por exemplo, `postgres-latest`). O deploy usa digests, em vez de tags que podem mudar.
+
+A publicação do banco agora também exige 20 testes de privilégios/recursos e uma atualização no mesmo volume com três notas, além dos 23 testes da API. A atualização confere o volume, o login, os dados e o encerramento de uma sessão privilegiada antiga. O gate separado de vulnerabilidades continua com os mesmos critérios.
