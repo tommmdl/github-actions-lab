@@ -1,0 +1,91 @@
+name: Testa e publica a alternativa Alpine da API
+on:
+  push:
+    branches: [main]
+    paths: ['api-alpine-sources.json', 'scripts/test-api-alpine.sh', '.github/workflows/api-alpine.yml']
+  pull_request:
+    branches: [main]
+    paths: ['api-alpine-sources.json', 'scripts/test-api-alpine.sh', '.github/workflows/api-alpine.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  alternative:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - name: Lê as origens fixadas
+        id: source
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          for name,revision in json.load(open('api-alpine-sources.json')).items():
+              assert len(revision)==40 and all(c in '0123456789abcdef' for c in revision)
+              print(name+'='+revision)
+          PY
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: tommmdl/docker-lab
+          ref: ${{ steps.source.outputs.api }}
+          path: app-source
+          persist-credentials: false
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: tommmdl/tracing-lab
+          ref: ${{ steps.source.outputs.tracing }}
+          path: trace-source
+          persist-credentials: false
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: tommmdl/security-lab
+          ref: ${{ steps.source.outputs.security }}
+          path: scan-source
+          persist-credentials: false
+      - name: Constrói, testa API, SQL, OTLP e aplica o gate completo
+        run: bash scripts/test-api-alpine.sh
+      - name: Publica exatamente as imagens testadas
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$ACTOR" --password-stdin
+          : > .local/api-alpine/published-images.txt
+          for VARIANT in basic traced; do
+            LOCAL=docker-lab-api-alpine:local
+            PREFIX=api-alpine
+            if [ "$VARIANT" = traced ]; then LOCAL=docker-lab-api-alpine-otel:local; PREFIX=api-alpine-otel; fi
+            test "$(docker image inspect "$LOCAL" --format '{{.Id}}')" = "$(cat ".local/api-alpine/$VARIANT-image-id.txt")"
+            IMAGE="ghcr.io/${OWNER,,}/docker-lab"
+            RUN_TAG="$PREFIX-run-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+            docker tag "$LOCAL" "$IMAGE:$RUN_TAG"
+            docker push "$IMAGE:$RUN_TAG"
+            docker tag "$LOCAL" "$IMAGE:$PREFIX-latest"
+            docker push "$IMAGE:$PREFIX-latest"
+            DIGEST=$(docker image inspect "$IMAGE:$RUN_TAG" --format '{{index .RepoDigests 0}}')
+            docker pull "$DIGEST"
+            test "$(docker image inspect "$DIGEST" --format '{{.Id}}')" = "$(cat ".local/api-alpine/$VARIANT-image-id.txt")"
+            printf '%s\n' "$DIGEST" >> .local/api-alpine/published-images.txt
+          done
+      - name: Guarda relatórios completos e identidades das imagens
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: api-alpine-evidence
+          path: |
+            .local/api-alpine/
+            app-source/.local/api-alpine-*.json
+            trace-source/.local/alpine-otlp-results.json
+          include-hidden-files: true
+          retention-days: 30
+          if-no-files-found: error
+      - name: Encerra a sessão do registry
+        if: always()
+        run: docker logout ghcr.io
