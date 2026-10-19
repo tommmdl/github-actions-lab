@@ -78,3 +78,5 @@ The same pipeline now tests an additional PostgreSQL Alpine image on separate vo
 The main Docker and Kubernetes labs have since adopted the tested Alpine image by digest, with logical backups and actual rollback. The source commit pinned in this publication lab records the earlier tested release; the standalone GHCR demo is unchanged. [Adoption and recovery](https://github.com/tommmdl/security-lab/blob/main/docs/postgres-adoption.en.md).
 
 The [Alpine API experiment](https://github.com/tommmdl/security-lab/blob/main/docs/api-alpine.en.md) tests both basic and instrumented images with full scans, application checks and real Collector/Tempo/Grafana/Loki tracing. It uses separate workloads and databases; main API image pins remain unchanged.
+
+The released basic and instrumented Alpine digests are now adopted in the primary Docker/Kubernetes labs, with actual rollback and backup checks. This workflow retains its pinned source commits as release provenance; the standalone historical GHCR demo was not silently upgraded. [Adoption evidence](https://github.com/tommmdl/security-lab/blob/main/docs/api-adoption.en.md).
