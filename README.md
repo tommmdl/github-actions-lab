@@ -72,3 +72,5 @@ O pipeline agora constrói e testa a API junto da imagem derivada do PostgreSQL 
 Os dois digests usam o pacote público já existente `ghcr.io/tommmdl/docker-lab`. As tags da API continuam iguais; as do banco começam com `postgres-` (por exemplo, `postgres-latest`). O deploy usa digests, em vez de tags que podem mudar.
 
 A publicação do banco agora também exige 20 testes de privilégios/recursos e uma atualização no mesmo volume com três notas, além dos 23 testes da API. A atualização confere o volume, o login, os dados e o encerramento de uma sessão privilegiada antiga. O gate separado de vulnerabilidades continua com os mesmos critérios.
+
+O mesmo pipeline agora testa uma imagem PostgreSQL Alpine adicional em volumes separados. Ele confere restauração lógica, retorno, 23 testes da API e 20 de privilégios/recursos. O artefato de imagens testadas contém três imagens e seus IDs. A publicação grava três digests nesta ordem: API, PostgreSQL Bookworm e PostgreSQL Alpine. As tags alternativas começam com `postgres-alpine-`; as tags `postgres-` continuam representando a variante Bookworm. Publicar os digests não troca automaticamente os bancos em execução.

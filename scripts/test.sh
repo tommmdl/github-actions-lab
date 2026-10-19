@@ -23,9 +23,17 @@ result = json.loads(Path('.local/integration-results.json').read_text())
 if result['passed'] != 23:
     raise SystemExit('Expected all 23 integration checks')
 CHECK
+# Keep default-image evidence separate from the alternative's test reports.
+cp .local/database-security-results.json .local/default-database-security-results.json
+cp .local/integration-results.json .local/default-integration-results.json
+docker build --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
+  --label "org.opencontainers.image.revision=${APP_REVISION}" \
+  -f images/postgres-alpine/Dockerfile -t docker-lab-postgres-alpine:local .
+python3 tests/postgres_alternative.py
 mkdir -p ../.local
 docker image inspect docker-lab-api:local --format '{{.Id}}' > ../.local/tested-image-id.txt
 docker image inspect docker-lab-postgres:local --format '{{.Id}}' > ../.local/tested-postgres-id.txt
-docker save docker-lab-api:local docker-lab-postgres:local -o ../.local/tested-image.tar
+docker image inspect docker-lab-postgres-alpine:local --format '{{.Id}}' > ../.local/tested-postgres-alpine-id.txt
+docker save docker-lab-api:local docker-lab-postgres:local docker-lab-postgres-alpine:local -o ../.local/tested-image.tar
 cd ../.local
 sha256sum tested-image.tar > tested-image.tar.sha256

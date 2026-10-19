@@ -72,3 +72,5 @@ The pipeline now builds and tests the API together with the derived PostgreSQL i
 Both digests use the existing public `ghcr.io/tommmdl/docker-lab` package. API tags are unchanged; database tags start with `postgres-` (for example `postgres-latest`). Deployment uses digests rather than mutable tags.
 
 Database publication now also requires 20 privilege/resource checks and an in-place upgrade test with three notes, in addition to the 23 API checks. The upgrade verifies the same volume, preserved login/data and termination of an old privileged session. The separate vulnerability gate remains unchanged.
+
+The same pipeline now tests an additional PostgreSQL Alpine image on separate volumes. It checks logical restore, rollback, 23 API checks and 20 privilege/resource checks. The tested-image artifact carries three images and their IDs. Publication writes three digests in order: API, Bookworm PostgreSQL, Alpine PostgreSQL. Alternative tags start with `postgres-alpine-`; existing `postgres-` tags keep the Bookworm variant. Published digests do not automatically replace running databases.

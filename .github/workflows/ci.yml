@@ -50,6 +50,7 @@ jobs:
             .local/tested-image.tar.sha256
             .local/tested-image-id.txt
             .local/tested-postgres-id.txt
+            .local/tested-postgres-alpine-id.txt
           include-hidden-files: true
           compression-level: 0
           retention-days: 3
@@ -70,9 +71,15 @@ jobs:
             app-source/.local/integration-results.json
             app-source/.local/database-security-results.json
             app-source/.local/database-upgrade-results.json
+            app-source/.local/default-database-security-results.json
+            app-source/.local/default-integration-results.json
+            app-source/.local/postgres-alternative-results.json
+            app-source/.local/postgres-alternative-api-tests.json
+            app-source/.local/postgres-alternative-security-tests.json
             .local/compose.log
             .local/tested-image-id.txt
             .local/tested-postgres-id.txt
+            .local/tested-postgres-alpine-id.txt
           include-hidden-files: true
           retention-days: 14
           if-no-files-found: warn
@@ -105,6 +112,7 @@ jobs:
           docker load --input tested-image.tar
           test "$(docker image inspect docker-lab-api:local --format '{{.Id}}')" = "$(cat tested-image-id.txt)"
           test "$(docker image inspect docker-lab-postgres:local --format '{{.Id}}')" = "$(cat tested-postgres-id.txt)"
+          test "$(docker image inspect docker-lab-postgres-alpine:local --format '{{.Id}}')" = "$(cat tested-postgres-alpine-id.txt)"
       - name: Login to GHCR
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -117,7 +125,7 @@ jobs:
         run: |
           RUN_TAG="run-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           : > published-image.txt
-          for NAME in docker-lab docker-lab-postgres; do
+          for NAME in docker-lab docker-lab-postgres docker-lab-postgres-alpine; do
             PREFIX=""
             LOCAL=docker-lab-api:local
             ID_FILE=image/tested-image-id.txt
@@ -125,6 +133,10 @@ jobs:
               PREFIX="postgres-"
               LOCAL=docker-lab-postgres:local
               ID_FILE=image/tested-postgres-id.txt
+            elif [ "$NAME" = docker-lab-postgres-alpine ]; then
+              PREFIX="postgres-alpine-"
+              LOCAL=docker-lab-postgres-alpine:local
+              ID_FILE=image/tested-postgres-alpine-id.txt
             fi
             IMAGE="ghcr.io/${OWNER,,}/docker-lab"
             for TAG in "$RUN_TAG" "app-${APP_REVISION}" latest; do
